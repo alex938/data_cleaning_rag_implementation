@@ -3,14 +3,31 @@ Improved data cleaning with document-type-aware chunking.
 Usage: python step1_clean_data_improved.py --config config.yaml
 """
 
-import os, re, json, yaml
+import os, re, json, yaml, logging
 from pathlib import Path
 from typing import List, Dict, Optional
+from datetime import datetime
 from tqdm import tqdm
 from unstructured.partition.auto import partition
+from pypdf import PdfReader
+
+# Setup logging
+log_dir = "./logs"
+os.makedirs(log_dir, exist_ok=True)
+log_file = os.path.join(log_dir, f"step1_clean_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 def load_config(config_path: str) -> dict:
     """Load YAML configuration."""
+    logger.info(f"Loading config from: {config_path}")
     with open(config_path, 'r') as f:
         return yaml.safe_load(f)
 
@@ -154,11 +171,28 @@ def extract_and_clean(config: dict):
     with open(out_jsonl, "w", encoding="utf-8") as fout:
         for fp in tqdm(files, desc="Processing documents"):
             try:
-                # Extract text
-                elements = partition(filename=str(fp))
-                text = "\n".join(
-                    [el.text for el in elements if getattr(el, "text", None)]
-                ).strip()
+                # Try pypdf first for PDFs (faster, no model downloads needed)
+                if fp.suffix.lower() == '.pdf':
+                    try:
+                        reader = PdfReader(str(fp))
+                        text_parts = []
+                        for page in reader.pages:
+                            page_text = page.extract_text()
+                            if page_text:
+                                text_parts.append(page_text)
+                        text = "\n".join(text_parts).strip()
+                    except Exception as e:
+                        # Fallback to unstructured
+                        elements = partition(filename=str(fp))
+                        text = "\n".join(
+                            [el.text for el in elements if getattr(el, "text", None)]
+                        ).strip()
+                else:
+                    # Use unstructured for other file types
+                    elements = partition(filename=str(fp))
+                    text = "\n".join(
+                        [el.text for el in elements if getattr(el, "text", None)]
+                    ).strip()
                 
                 if not text:
                     continue
@@ -184,11 +218,13 @@ def extract_and_clean(config: dict):
                     fout.write(json.dumps(rec, ensure_ascii=False) + "\n")
                     total_chunks += 1
                 
+                logger.info(f"Processed {fp.name}: {len(chunks)} chunks")
+                
             except Exception as e:
-                print(f"[WARN] Failed to process {fp}: {e}")
+                logger.warning(f"Failed to process {fp}: {e}")
     
-    print(f"\n✅ Processed {len(files)} files into {total_chunks} chunks")
-    print(f"📄 Output: {out_jsonl}")
+    logger.info(f"\n✅ Processed {len(files)} files into {total_chunks} chunks")
+    logger.info(f"📄 Output: {out_jsonl}")
 
 if __name__ == "__main__":
     import argparse

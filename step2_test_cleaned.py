@@ -1,7 +1,7 @@
 from pathlib import Path
 import json
 
-out_file = Path("./data/customer1/processed/clean.jsonl")
+out_file = Path("./data/1/processed/clean.jsonl")
 
 # 1️⃣ Check the file exists
 if not out_file.exists():

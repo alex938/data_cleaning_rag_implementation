@@ -6,14 +6,31 @@ from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 import yaml
 import requests
+import logging
+import os
+from datetime import datetime
 from typing import List, Dict
+
+# Setup logging
+log_dir = "./logs"
+os.makedirs(log_dir, exist_ok=True)
+log_file = os.path.join(log_dir, f"query_engine_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 class RAGQueryEngine:
     def __init__(self, config_path="config.yaml"):
         self.cfg = yaml.safe_load(open(config_path))
         
         # Embedding model for retrieval
-        print(f"Loading embedding model: {self.cfg['embedding']['model']}...")
+        logger.info(f"Loading embedding model: {self.cfg['embedding']['model']}...")
         self.embedding_model = SentenceTransformer(self.cfg['embedding']['model'])
         
         # Qdrant client
@@ -33,8 +50,8 @@ class RAGQueryEngine:
         self.temperature = self.cfg['llm']['temperature']
         self.max_tokens = self.cfg['llm']['max_tokens']
         
-        print(f"Connected to Ollama at: {self.ollama_host}")
-        print(f"Using model: {self.ollama_model}\n")
+        logger.info(f"Connected to Ollama at: {self.ollama_host}")
+        logger.info(f"Using model: {self.ollama_model}")
     
     def retrieve(self, query: str, filters: dict = None) -> List[Dict]:
         """Step 1: Retrieve relevant chunks from vector DB."""
@@ -66,7 +83,8 @@ class RAGQueryEngine:
             context_parts.append(
                 f"[Document {i}: {chunk['filename']}]\n{chunk['text']}\n"
             )
-        return "\n".join(context_parts)
+        context = "\n".join(context_parts)
+        return context
     
     def query(self, question: str, filters: dict = None) -> Dict:
         """
@@ -103,7 +121,7 @@ Instructions:
 - Answer based only on the documents above
 - If the answer is not in the documents, say "I cannot find this information in the provided documents"
 - Be concise and specific
-- Cite which document number you used
+- Do NOT add document citations in your answer
 
 Answer:"""
         
@@ -148,10 +166,15 @@ Answer:"""
 # ========================================
 
 if __name__ == "__main__":
+    import sys
+    
     engine = RAGQueryEngine()
     
-    # Example query
-    question = "What are the main project risks?"
+    # Get question from command line argument or use default
+    if len(sys.argv) > 1:
+        question = " ".join(sys.argv[1:])
+    else:
+        question = "what does the valuation tool do?"
     
     print(f"Question: {question}\n")
     print("Retrieving relevant documents...")

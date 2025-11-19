@@ -22,9 +22,9 @@ count = client.count(collection_name=collection).count
 print(f"✅ Collection '{collection}' contains {count} vectors\n")
 
 # --- Try a simple semantic search ---
-query = "project risks or challenges discussed"
+query = "what does the valuation tool do?"
 print(f"🔍 Query: {query}")
-model = SentenceTransformer(cfg["embedding_model"])
+model = SentenceTransformer(cfg["embedding"]["model"])
 q_vec = model.encode(query, normalize_embeddings=True)
 
 results = client.search(

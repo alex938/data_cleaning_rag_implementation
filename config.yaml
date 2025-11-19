@@ -1,10 +1,10 @@
 # ============================================
 # GLOBAL SETTINGS
 # ============================================
-customer_id: "customer1"
-data_dir: "./data/customer1"
-raw_dir: "./data/customer1/raw"              # Where you put original PDFs/DOCX/emails
-processed_dir: "./data/customer1/processed"  # Where cleaned JSONL is stored
+customer_id: "1"
+data_dir: "./data/1"
+raw_dir: "./data/1/raw"              # Where you put original PDFs/DOCX/emails
+processed_dir: "./data/1/processed"  # Where cleaned JSONL is stored
 
 # ============================================
 # STEP 1: step1_clean_data.py
@@ -28,8 +28,8 @@ document_processing:
     # For large documents (PDFs, long reports)
     large_documents:
       extensions: [".pdf", ".docx", ".doc"]
-      strategy: "recursive"  # Options: "recursive", "sentence", "fixed"
-      chunk_size: 1000       # tokens/characters
+      strategy: "fixed"      # Use fixed-size chunks for better control
+      chunk_size: 1500       # characters
       chunk_overlap: 200     # overlap between chunks
       min_chunk_size: 100    # discard smaller chunks
     
@@ -87,7 +87,7 @@ embedding:
   max_seq_length: 512  # Model's max token length
   
   # Device settings
-  device: "cpu"  # Options: "cpu", "cuda", "mps"
+  device: "cuda"  # Options: "cpu", "cuda", "mps"
 
 # ============================================
 # STEP 3 & 4: Qdrant Vector Database
@@ -97,7 +97,7 @@ embedding:
 qdrant:
   host: "localhost"
   port: 6333
-  collection: "customer1_docs"  # THIS IS WHERE YOUR DOCUMENTS ARE STORED
+  collection: "1"  # THIS IS WHERE YOUR DOCUMENTS ARE STORED
   
   # Vector configuration
   vector_config:
@@ -116,7 +116,7 @@ qdrant:
 query:
   # Retrieval settings
   top_k: 5                     # Number of documents to retrieve
-  score_threshold: 0.7         # Minimum similarity score
+  score_threshold: 0.2         # Minimum similarity score (lowered for better recall)
   
   # Context window for LLM
   max_context_tokens: 3000     # Total tokens to send to LLM
@@ -125,8 +125,8 @@ query:
 # query_engine.py - Ollama LLM Configuration
 # ============================================
 llm:
-  host: "http://192.168.2.102:11434"  # Your Ollama server
-  model: "llama3.2"                    # Available: llama3.2, mistral, qwen2.5, etc.
+  host: "http://ai.labjunkie.org:11434"  # Your Ollama server
+  model: "mixtral:8x7b"                    # Available: llama3.2, mistral, qwen2.5, etc.
   temperature: 0.3                     # Lower = more focused, higher = more creative
   max_tokens: 2000                     # Maximum response length
 
@@ -141,3 +141,5 @@ monitoring:
   track_processing_time: true
   track_chunk_statistics: true
   track_embedding_quality: false
+
+

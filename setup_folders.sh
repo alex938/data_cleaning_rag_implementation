@@ -2,7 +2,7 @@
 # Setup folder structure for RAG pipeline
 # Run: bash setup_folders.sh [customer_id]
 
-CUSTOMER_ID="${1:-customer1}"
+CUSTOMER_ID="${1:-1}"
 
 echo "Creating folder structure for: $CUSTOMER_ID"
 
